@@ -1,0 +1,7 @@
+flask
+openai-whisper
+deep-translator
+elevenlabs
+moviepy
+python-dotenv
+ffmpeg-python

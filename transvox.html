@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>TransVox — AI Video Dubbing</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500&family=Space+Mono&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #080a0f; --surface: #0e1117; --border: #1e2530;
+      --accent: #e8ff47; --accent2: #47ffe8;
+      --text: #f0f2f5; --muted: #5a6478; --card: #10141c;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; overflow-x: hidden; }
+    .bg-grid { position: fixed; inset: 0; z-index: 0; background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px); background-size: 40px 40px; opacity: 0.4; pointer-events: none; }
+    .bg-glow { position: fixed; top: -200px; left: 50%; transform: translateX(-50%); width: 800px; height: 500px; background: radial-gradient(ellipse, rgba(232,255,71,0.06) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+    nav { position: relative; z-index: 10; display: flex; align-items: center; justify-content: space-between; padding: 24px 48px; border-bottom: 1px solid var(--border); }
+    .logo { display: flex; align-items: center; gap: 10px; font-family: 'Bebas Neue', sans-serif; font-size: 1.6rem; letter-spacing: 2px; }
+    .logo-icon { color: var(--accent); }
+    .logo-text em { color: var(--accent); font-style: normal; }
+    .nav-tag { font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 2px; border: 1px solid var(--border); padding: 6px 14px; border-radius: 20px; }
+    .hero { position: relative; z-index: 1; text-align: center; padding: 80px 24px 60px; }
+    .hero-badge { font-family: 'Space Mono', monospace; font-size: 0.6rem; letter-spacing: 4px; color: var(--accent); border: 1px solid rgba(232,255,71,0.3); display: inline-block; padding: 8px 20px; border-radius: 20px; margin-bottom: 28px; background: rgba(232,255,71,0.05); }
+    .hero h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(4rem, 10vw, 8rem); line-height: 0.95; letter-spacing: 2px; margin-bottom: 24px; }
+    .hero h1 .accent { color: var(--accent); }
+    .hero-sub { max-width: 520px; margin: 0 auto 36px; color: var(--muted); font-size: 1rem; line-height: 1.7; font-weight: 300; }
+    .hero-langs { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; font-family: 'Space Mono', monospace; font-size: 0.8rem; }
+    .hero-langs span { color: var(--muted); }
+    .hero-langs .arrow { color: var(--border); }
+    .hero-langs .target { color: var(--accent); font-size: 1rem; border-bottom: 1px solid var(--accent); padding-bottom: 2px; }
+    main { position: relative; z-index: 1; max-width: 780px; margin: 0 auto; padding: 0 24px 80px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; box-shadow: 0 40px 80px rgba(0,0,0,0.5); animation: fadeUp 0.6s ease forwards; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    .step { display: flex; gap: 24px; padding: 36px 40px; }
+    .step-num { font-family: 'Bebas Neue', sans-serif; font-size: 3rem; line-height: 1; color: var(--border); flex-shrink: 0; width: 48px; }
+    .step-body { flex: 1; }
+    .step-body h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.4rem; letter-spacing: 2px; margin-bottom: 20px; }
+    .divider { height: 1px; background: var(--border); margin: 0 40px; }
+    .upload-zone { border: 1.5px dashed var(--border); border-radius: 12px; padding: 40px 24px; text-align: center; cursor: pointer; transition: all 0.3s; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+    .upload-zone:hover { border-color: var(--accent); background: rgba(232,255,71,0.03); }
+    .upload-zone.dragover { border-color: var(--accent); background: rgba(232,255,71,0.06); }
+    .upload-icon { font-size: 2rem; color: var(--accent); animation: bounce 2s infinite; }
+    @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .upload-zone p { color: var(--muted); font-size: 0.9rem; }
+    .upload-zone span { color: var(--border); font-size: 0.8rem; }
+    .btn-outline { border: 1px solid var(--accent); color: var(--accent); padding: 8px 20px; border-radius: 8px; font-size: 0.8rem; cursor: pointer; font-family: 'Space Mono', monospace; transition: all 0.2s; background: transparent; }
+    .btn-outline:hover { background: var(--accent); color: var(--bg); }
+    .file-preview { display: none; align-items: center; gap: 12px; background: rgba(232,255,71,0.06); border: 1px solid rgba(232,255,71,0.2); border-radius: 10px; padding: 14px 18px; margin-top: 12px; }
+    .file-preview.visible { display: flex; }
+    .file-name { flex: 1; font-size: 0.85rem; color: var(--accent); font-family: 'Space Mono', monospace; }
+    .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; }
+    .lang-row { display: flex; align-items: center; gap: 16px; }
+    .lang-group { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .lang-group label { font-size: 0.7rem; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; font-family: 'Space Mono', monospace; }
+    select { background: var(--surface); border: 1px solid var(--border); color: var(--text); padding: 12px 16px; border-radius: 10px; font-size: 0.9rem; cursor: pointer; outline: none; transition: border-color 0.2s; width: 100%; }
+    select:focus { border-color: var(--accent); }
+    .lang-arrow { font-size: 1.5rem; color: var(--accent); flex-shrink: 0; margin-top: 24px; }
+    .options-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .option-card { border: 1px solid var(--border); border-radius: 12px; padding: 18px 14px; cursor: pointer; transition: all 0.2s; position: relative; text-align: center; background: var(--surface); }
+    .option-card.active { border-color: var(--accent); background: rgba(232,255,71,0.05); }
+    .opt-icon { font-size: 1.4rem; margin-bottom: 8px; }
+    .opt-label { font-size: 0.8rem; font-weight: 500; margin-bottom: 4px; }
+    .opt-desc { font-size: 0.7rem; color: var(--muted); line-height: 1.4; }
+    .opt-check { position: absolute; top: 10px; right: 10px; width: 18px; height: 18px; background: var(--accent); color: var(--bg); border-radius: 50%; font-size: 0.6rem; display: none; align-items: center; justify-content: center; font-weight: bold; }
+    .option-card.active .opt-check { display: flex; }
+    .action-row { padding: 32px 40px; display: flex; justify-content: center; }
+    .btn-primary { background: var(--accent); color: var(--bg); border: none; border-radius: 12px; padding: 16px 48px; font-family: 'Bebas Neue', sans-serif; font-size: 1.2rem; letter-spacing: 3px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; box-shadow: 0 0 40px rgba(232,255,71,0.2); }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 60px rgba(232,255,71,0.35); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .progress-section { display: none; padding: 0 40px 36px; }
+    .progress-section.visible { display: block; }
+    .progress-label { display: flex; justify-content: space-between; font-family: 'Space Mono', monospace; font-size: 0.75rem; color: var(--muted); margin-bottom: 10px; }
+    .progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; margin-bottom: 20px; }
+    .progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent), var(--accent2)); border-radius: 2px; transition: width 0.5s ease; box-shadow: 0 0 10px var(--accent); }
+    .progress-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ps { font-size: 0.65rem; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); color: var(--muted); font-family: 'Space Mono', monospace; transition: all 0.3s; }
+    .ps.active { border-color: var(--accent); color: var(--accent); background: rgba(232,255,71,0.08); }
+    .ps.done { border-color: var(--accent2); color: var(--accent2); background: rgba(71,255,232,0.06); }
+    .error-section { display: none; padding: 0 40px 36px; }
+    .error-section.visible { display: block; }
+    .error-msg { background: rgba(255,71,71,0.1); border: 1px solid rgba(255,71,71,0.3); color: #ff4747; border-radius: 10px; padding: 16px; font-size: 0.85rem; font-family: 'Space Mono', monospace; }
+    .result-section { display: none; text-align: center; padding: 0 40px 48px; }
+    .result-section.visible { display: block; }
+    .result-icon { font-size: 3rem; color: var(--accent); margin-bottom: 16px; animation: spin 3s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .result-section h3 { font-family: 'Bebas Neue', sans-serif; font-size: 1.8rem; letter-spacing: 2px; margin-bottom: 8px; }
+    .result-section p { color: var(--muted); font-size: 0.9rem; margin-bottom: 24px; }
+    .btn-download { background: transparent; border: 1.5px solid var(--accent2); color: var(--accent2); padding: 14px 40px; border-radius: 10px; font-family: 'Space Mono', monospace; font-size: 0.85rem; letter-spacing: 2px; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
+    .btn-download:hover { background: var(--accent2); color: var(--bg); }
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 24px; }
+    .feature { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 24px 20px; text-align: center; transition: border-color 0.2s; }
+    .feature:hover { border-color: var(--muted); }
+    .f-icon { font-size: 1.5rem; margin-bottom: 10px; }
+    .f-title { font-size: 0.85rem; font-weight: 500; margin-bottom: 4px; }
+    .f-desc { font-size: 0.75rem; color: var(--muted); }
+    footer { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: center; padding: 24px 48px; border-top: 1px solid var(--border); font-family: 'Space Mono', monospace; font-size: 0.65rem; color: var(--muted); letter-spacing: 1px; }
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; } .nav-tag { display: none; }
+      .step { padding: 24px 20px; flex-direction: column; gap: 12px; } .step-num { font-size: 2rem; }
+      .divider { margin: 0 20px; } .lang-row { flex-direction: column; } .lang-arrow { margin-top: 0; align-self: center; }
+      .options-grid { grid-template-columns: 1fr; } .action-row { padding: 24px 20px; }
+      .progress-section, .result-section, .error-section { padding-left: 20px; padding-right: 20px; }
+      .features { grid-template-columns: 1fr; } footer { padding: 16px 20px; flex-direction: column; gap: 8px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+  <nav>
+    <div class="logo"><span class="logo-icon">⬡</span><span class="logo-text">TRANS<em>VOX</em></span></div>
+    <div class="nav-tag">AI Video Dubbing Engine</div>
+  </nav>
+  <header class="hero">
+    <div class="hero-badge">MULTILINGUAL · VOICE CLONE · LIP SYNC</div>
+    <h1>Speak Every<br/><span class="accent">Language.</span></h1>
+    <p class="hero-sub">Upload any video. Choose a language. TransVox rebuilds it — same voice, perfect lip sync, zero accent barriers.</p>
+    <div class="hero-langs">
+      <span>English</span><span class="arrow">→</span><span>Hindi</span><span class="arrow">→</span><span>Tamil</span><span class="arrow">→</span><span class="target">తెలుగు</span>
+    </div>
+  </header>
+  <main>
+    <div class="card">
+      <div class="step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <h2>Upload Video</h2>
+          <div class="upload-zone" id="uploadZone">
+            <div class="upload-icon">▲</div>
+            <p>Drag & drop your video here</p>
+            <span>or</span>
+            <label class="btn-outline" for="fileInput">Browse File</label>
+            <input type="file" id="fileInput" accept="video/*" hidden />
+            <p style="font-size:0.75rem;color:var(--muted)">Supports MP4, MOV, AVI · Max 500MB</p>
+          </div>
+          <div class="file-preview" id="filePreview">
+            <span>🎬</span>
+            <span class="file-name" id="fileName">video.mp4</span>
+            <button class="remove-btn" id="removeFile">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <h2>Select Languages</h2>
+          <div class="lang-row">
+            <div class="lang-group">
+              <label>Source Language</label>
+              <select id="sourceLang">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="kn">Kannada</option>
+                <option value="mr">Marathi</option>
+                <option value="bn">Bengali</option>
+              </select>
+            </div>
+            <div class="lang-arrow">⇄</div>
+            <div class="lang-group">
+              <label>Target Language</label>
+              <select id="targetLang">
+                <option value="te">తెలుగు Telugu</option>
+                <option value="hi">Hindi</option>
+                <option value="ta">Tamil</option>
+                <option value="kn">Kannada</option>
+                <option value="mr">Marathi</option>
+                <option value="en">English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <h2>Processing Options</h2>
+          <div class="options-grid">
+            <div class="option-card active" onclick="toggleOption(this)">
+              <div class="opt-icon">🎙️</div><div class="opt-label">Voice Clone</div>
+              <div class="opt-desc">Preserve original speaker's voice</div><div class="opt-check">✓</div>
+            </div>
+            <div class="option-card active" onclick="toggleOption(this)">
+              <div class="opt-icon">👄</div><div class="opt-label">Lip Sync</div>
+              <div class="opt-desc">Match lips to new audio</div><div class="opt-check">✓</div>
+            </div>
+            <div class="option-card active" onclick="toggleOption(this)">
+              <div class="opt-icon">🔇</div><div class="opt-label">Noise Reduce</div>
+              <div class="opt-desc">Clean background noise</div><div class="opt-check">✓</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="action-row">
+        <button class="btn-primary" id="translateBtn" onclick="startProcess()">
+          <span>Start TransVox</span><span>→</span>
+        </button>
+      </div>
+      <div class="progress-section" id="progressSection">
+        <div class="progress-label">
+          <span id="progressText">Uploading video...</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+        <div class="progress-steps">
+          <div class="ps" id="ps1">📤 Upload</div>
+          <div class="ps" id="ps2">🎤 Extract</div>
+          <div class="ps" id="ps3">📝 Transcribe</div>
+          <div class="ps" id="ps4">🌐 Translate</div>
+          <div class="ps" id="ps5">🔊 Voice</div>
+          <div class="ps" id="ps6">🎬 Render</div>
+        </div>
+      </div>
+      <div class="error-section" id="errorSection">
+        <div class="error-msg" id="errorMsg">Something went wrong!</div>
+      </div>
+      <div class="result-section" id="resultSection">
+        <div class="result-icon">✦</div>
+        <h3>Translation Complete!</h3>
+        <p>Your video has been dubbed successfully.</p>
+        <a class="btn-download" id="downloadBtn" href="#">↓ Download Video</a>
+      </div>
+    </div>
+    <div class="features">
+      <div class="feature"><div class="f-icon">⚡</div><div class="f-title">Fast Processing</div><div class="f-desc">GPU-accelerated pipeline</div></div>
+      <div class="feature"><div class="f-icon">🎯</div><div class="f-title">10+ Languages</div><div class="f-desc">South Asian language focus</div></div>
+      <div class="feature"><div class="f-icon">🔒</div><div class="f-title">Private & Secure</div><div class="f-desc">Videos never stored</div></div>
+    </div>
+  </main>
+  <footer>
+    <span>⬡ TRANSVOX</span>
+    <span>Built with Whisper · ElevenLabs · Wav2Lip</span>
+  </footer>
+  <script>
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    const removeFile = document.getElementById('removeFile');
+    let uploadedFilename = null;
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault(); uploadZone.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('video/')) handleFile(file);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+    function handleFile(file) {
+      fileName.textContent = file.name;
+      uploadZone.style.display = 'none';
+      filePreview.classList.add('visible');
+    }
+
+    removeFile.addEventListener('click', () => {
+      fileInput.value = ''; uploadedFilename = null;
+      uploadZone.style.display = 'flex';
+      filePreview.classList.remove('visible');
+    });
+
+    function toggleOption(el) { el.classList.toggle('active'); }
+
+    function showProgress(text, pct, stepId) {
+      document.getElementById('progressText').textContent = text;
+      document.getElementById('progressPct').textContent = pct + '%';
+      document.getElementById('progressFill').style.width = pct + '%';
+      if (stepId) {
+        document.querySelectorAll('.ps').forEach(p => {
+          if (p.id === stepId) p.classList.add('active');
+          else if (p.classList.contains('active')) { p.classList.remove('active'); p.classList.add('done'); }
+        });
+      }
+    }
+
+    async function startProcess() {
+      const file = fileInput.files[0];
+      if (!file) { alert('Please upload a video first!'); return; }
+
+      const translateBtn = document.getElementById('translateBtn');
+      const progressSection = document.getElementById('progressSection');
+      const resultSection = document.getElementById('resultSection');
+      const errorSection = document.getElementById('errorSection');
+
+      translateBtn.disabled = true;
+      progressSection.classList.add('visible');
+      resultSection.classList.remove('visible');
+      errorSection.classList.remove('visible');
+      document.querySelectorAll('.ps').forEach(p => p.classList.remove('active', 'done'));
+
+      try {
+        // Step 1: Upload
+        showProgress('Uploading video...', 10, 'ps1');
+        const formData = new FormData();
+        formData.append('video', file);
+        const uploadRes = await fetch('/upload', { method: 'POST', body: formData });
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) throw new Error(uploadData.error);
+        uploadedFilename = uploadData.filename;
+
+        // Step 2: Process
+        showProgress('Extracting audio...', 25, 'ps2');
+        const sourceLang = document.getElementById('sourceLang').value;
+        const targetLang = document.getElementById('targetLang').value;
+
+        setTimeout(() => showProgress('Transcribing speech...', 40, 'ps3'), 2000);
+        setTimeout(() => showProgress('Translating text...', 55, 'ps4'), 5000);
+        setTimeout(() => showProgress('Cloning voice...', 70, 'ps5'), 8000);
+        setTimeout(() => showProgress('Rendering final video...', 85, 'ps6'), 12000);
+
+        const processRes = await fetch('/process', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filename: uploadedFilename, source_lang: sourceLang, target_lang: targetLang })
+        });
+        const processData = await processRes.json();
+        if (!processRes.ok) throw new Error(processData.error);
+
+        showProgress('Complete!', 100, null);
+        document.querySelectorAll('.ps').forEach(p => { p.classList.remove('active'); p.classList.add('done'); });
+
+        setTimeout(() => {
+          progressSection.classList.remove('visible');
+          resultSection.classList.add('visible');
+          document.getElementById('downloadBtn').href = '/download/' + processData.output;
+        }, 1000);
+
+      } catch (error) {
+        progressSection.classList.remove('visible');
+        errorSection.classList.add('visible');
+        document.getElementById('errorMsg').textContent = 'Error: ' + error.message;
+      }
+      translateBtn.disabled = false;
+    }
+  </script>
+</body>
+</html>
+
