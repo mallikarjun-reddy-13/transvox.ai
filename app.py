@@ -69,6 +69,8 @@ def process_video():
     target_lang = data.get("target_lang", "te")
     supported_languages = {"en", "hi", "ta", "kn", "mr", "bn", "te"}
 
+    if not isinstance(source_lang, str) or not isinstance(target_lang, str):
+        return jsonify({"error": "Source and target languages must be language codes."}), 400
     if source_lang not in supported_languages or target_lang not in supported_languages:
         return jsonify({"error": "Unsupported language selection."}), 400
     if source_lang == target_lang:
