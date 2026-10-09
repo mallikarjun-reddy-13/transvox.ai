@@ -120,7 +120,7 @@ def process_video():
 
 @app.route("/preview/<path:filename>")
 def preview_video(filename):
-    if not isinstance(filename, str) or not re.fullmatch(r"[a-f0-9]{32}_(dubbed)\\.mp4", filename):
+    if not isinstance(filename, str) or not re.fullmatch(r"[a-f0-9]{32}_(dubbed)\.mp4", filename):
         return jsonify({"error": "Invalid output filename."}), 400
     if not (OUTPUT_FOLDER / filename).is_file():
         return jsonify({"error": "Output video not found."}), 404
