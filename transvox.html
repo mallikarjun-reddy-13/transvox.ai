@@ -242,18 +242,37 @@
     const fileName = document.getElementById('fileName');
     const removeFile = document.getElementById('removeFile');
     let uploadedFilename = null;
+    const MAX_FILE_SIZE = 500 * 1024 * 1024;
+    const ALLOWED_EXTENSIONS = ['.mp4', '.mov', '.avi'];
 
-    uploadZone.addEventListener('click', () => fileInput.click());
+    uploadZone.addEventListener('click', (event) => {
+      if (event.target.closest('label, input, button')) return;
+      fileInput.click();
+    });
     uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
     uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
     uploadZone.addEventListener('drop', (e) => {
       e.preventDefault(); uploadZone.classList.remove('dragover');
       const file = e.dataTransfer.files[0];
-      if (file && file.type.startsWith('video/')) handleFile(file);
+      if (file) handleFile(file);
     });
     fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
 
     function handleFile(file) {
+      const extension = '.' + file.name.split('.').pop().toLowerCase();
+      if (!ALLOWED_EXTENSIONS.includes(extension)) {
+        alert('Unsupported file type. Please choose an MP4, MOV, or AVI video.');
+        fileInput.value = '';
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        alert('The video exceeds the 500 MB upload limit.');
+        fileInput.value = '';
+        return;
+      }
+      const transfer = new DataTransfer();
+      transfer.items.add(file);
+      fileInput.files = transfer.files;
       fileName.textContent = file.name;
       uploadZone.style.display = 'none';
       filePreview.classList.add('visible');
@@ -282,6 +301,12 @@
     async function startProcess() {
       const file = fileInput.files[0];
       if (!file) { alert('Please upload a video first!'); return; }
+      const sourceLang = document.getElementById('sourceLang').value;
+      const targetLang = document.getElementById('targetLang').value;
+      if (sourceLang === targetLang) {
+        alert('Please choose different source and target languages.');
+        return;
+      }
 
       const translateBtn = document.getElementById('translateBtn');
       const progressSection = document.getElementById('progressSection');
@@ -301,18 +326,12 @@
         formData.append('video', file);
         const uploadRes = await fetch('/upload', { method: 'POST', body: formData });
         const uploadData = await uploadRes.json();
-        if (!uploadRes.ok) throw new Error(uploadData.error);
+        if (!uploadRes.ok) throw new Error(uploadData.error || 'Video upload failed.');
         uploadedFilename = uploadData.filename;
 
         // Step 2: Process
         showProgress('Extracting audio...', 25, 'ps2');
-        const sourceLang = document.getElementById('sourceLang').value;
-        const targetLang = document.getElementById('targetLang').value;
-
-        setTimeout(() => showProgress('Transcribing speech...', 40, 'ps3'), 2000);
-        setTimeout(() => showProgress('Translating text...', 55, 'ps4'), 5000);
-        setTimeout(() => showProgress('Cloning voice...', 70, 'ps5'), 8000);
-        setTimeout(() => showProgress('Rendering final video...', 85, 'ps6'), 12000);
+        showProgress('Transcribing, translating, and rendering video...', 35, 'ps3');
 
         const processRes = await fetch('/process', {
           method: 'POST',
@@ -320,7 +339,7 @@
           body: JSON.stringify({ filename: uploadedFilename, source_lang: sourceLang, target_lang: targetLang })
         });
         const processData = await processRes.json();
-        if (!processRes.ok) throw new Error(processData.error);
+        if (!processRes.ok) throw new Error(processData.error || 'Video processing failed.');
 
         showProgress('Complete!', 100, null);
         document.querySelectorAll('.ps').forEach(p => { p.classList.remove('active'); p.classList.add('done'); });
