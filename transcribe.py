@@ -1,42 +1,38 @@
+from pathlib import Path
+
 import whisper
-import os
 from moviepy.editor import VideoFileClip
 
+
 def extract_audio(video_path):
-    """Extract audio from video file"""
-    audio_path = video_path.replace('.mp4', '.wav').replace('.mov', '.wav').replace('.avi', '.wav')
-    audio_path = audio_path.replace('input_video', 'input_video/audio')
-    
-    # Create audio folder
-    os.makedirs('input_video/audio', exist_ok=True)
-    
-    # Extract audio using moviepy
-    video = VideoFileClip(video_path)
-    
-    if video.audio is None:
-        raise Exception("Video has no audio track!")
-    
-    video.audio.write_audiofile(audio_path, codec='pcm_s16le')
-    video.close()
-    
-    return audio_path
+    """Extract a video's audio track into a WAV file."""
+    video_path = Path(video_path)
+    audio_dir = Path("input_video") / "audio"
+    audio_dir.mkdir(parents=True, exist_ok=True)
+    audio_path = audio_dir / f"{video_path.stem}.wav"
+
+    video = VideoFileClip(str(video_path))
+    try:
+        if video.audio is None:
+            raise ValueError("This video does not contain an audio track.")
+        video.audio.write_audiofile(
+            str(audio_path),
+            codec="pcm_s16le",
+            logger=None,
+        )
+    finally:
+        video.close()
+
+    return str(audio_path)
+
 
 def transcribe_audio(video_path):
-    """Transcribe audio from video to text using Whisper"""
-    
-    # Step 1: Extract audio from video
-    print("Extracting audio from video...")
+    """Extract audio from a video and transcribe it with Whisper."""
     audio_path = extract_audio(video_path)
-    
-    # Step 2: Load Whisper model
-    print("Loading Whisper model...")
-    model = whisper.load_model("base")
-    
-    # Step 3: Transcribe audio to text
-    print("Transcribing audio...")
-    result = model.transcribe(audio_path)
-    
-    text = result["text"]
-    print(f"Transcription done: {text}")
-    
-    return text
+    try:
+        model = whisper.load_model("base")
+        result = model.transcribe(audio_path)
+        return (result.get("text") or "").strip()
+    finally:
+        # Keep intermediate audio only for the duration of transcription.
+        Path(audio_path).unlink(missing_ok=True)
