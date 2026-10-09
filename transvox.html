@@ -115,7 +115,7 @@
   <header class="hero">
     <div class="hero-badge">MULTILINGUAL · VOICE CLONE · LIP SYNC</div>
     <h1>Speak Every<br/><span class="accent">Language.</span></h1>
-    <p class="hero-sub">Upload any video. Choose a language. TransVox rebuilds it — same voice, perfect lip sync, zero accent barriers.</p>
+    <p class="hero-sub">Upload a video, choose your languages, and generate translated speech. Lip-sync quality depends on whether Wav2Lip and its model checkpoint are installed.</p>
     <div class="hero-langs">
       <span>English</span><span class="arrow">→</span><span>Hindi</span><span class="arrow">→</span><span>Tamil</span><span class="arrow">→</span><span class="target">తెలుగు</span>
     </div>
@@ -180,16 +180,16 @@
           <h2>Processing Options</h2>
           <div class="options-grid">
             <div class="option-card active" onclick="toggleOption(this)">
-              <div class="opt-icon">🎙️</div><div class="opt-label">Voice Clone</div>
-              <div class="opt-desc">Preserve original speaker's voice</div><div class="opt-check">✓</div>
+              <div class="opt-icon">🎙️</div><div class="opt-label">Voice Generation</div>
+              <div class="opt-desc">Generate speech with the configured voice</div><div class="opt-check">✓</div>
             </div>
             <div class="option-card active" onclick="toggleOption(this)">
               <div class="opt-icon">👄</div><div class="opt-label">Lip Sync</div>
-              <div class="opt-desc">Match lips to new audio</div><div class="opt-check">✓</div>
+              <div class="opt-desc">Uses Wav2Lip when installed</div><div class="opt-check">✓</div>
             </div>
             <div class="option-card active" onclick="toggleOption(this)">
-              <div class="opt-icon">🔇</div><div class="opt-label">Noise Reduce</div>
-              <div class="opt-desc">Clean background noise</div><div class="opt-check">✓</div>
+              <div class="opt-icon">🔇</div><div class="opt-label">Audio Replace</div>
+              <div class="opt-desc">Fallback replaces the audio track</div><div class="opt-check">✓</div>
             </div>
           </div>
         </div>
@@ -227,8 +227,8 @@
     </div>
     <div class="features">
       <div class="feature"><div class="f-icon">⚡</div><div class="f-title">Fast Processing</div><div class="f-desc">GPU-accelerated pipeline</div></div>
-      <div class="feature"><div class="f-icon">🎯</div><div class="f-title">10+ Languages</div><div class="f-desc">South Asian language focus</div></div>
-      <div class="feature"><div class="f-icon">🔒</div><div class="f-title">Private & Secure</div><div class="f-desc">Videos never stored</div></div>
+      <div class="feature"><div class="f-icon">🎯</div><div class="f-title">Multiple Languages</div><div class="f-desc">Available choices depend on provider support</div></div>
+      <div class="feature"><div class="f-icon">🔒</div><div class="f-title">Local File Storage</div><div class="f-desc">Uploaded and output files remain on the server until removed</div></div>
     </div>
   </main>
   <footer>
