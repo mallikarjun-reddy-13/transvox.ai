@@ -10,9 +10,6 @@ with same voice and perfect lip sync.
 
 ## Supported Languages
 - English to Telugu
-- Hindi to Telugu
-- Tamil to Telugu
-- Kannada to Telugu
 
 ---
 
@@ -104,6 +101,6 @@ Video → Whisper → Google Translate → ElevenLabs → Wav2Lip → Final Vide
 ---
 
 ## Developer
-Built by - Your Name
+Built by - Mallikarjun reddy 
 Project - TransVox
 Version - 1.0.0
