@@ -1,106 +1,105 @@
-TransVox - AI Video Dubbing Engine
+# TransVox — AI Video Dubbing Engine
 
-## Purpose
+TransVox is a Flask-based prototype that transcribes video speech, translates the text, generates translated speech with ElevenLabs, and renders a dubbed video. Lip-sync is performed by Wav2Lip only when its script and checkpoint are installed; otherwise the app replaces the video's audio track.
 
-TransVox is an AI powered video dubbing tool.
-It converts any video from one language to another
-with same voice and perfect lip sync.
+## Current pipeline
 
----
+1. Extract audio from the uploaded video.
+2. Transcribe speech with OpenAI Whisper.
+3. Translate the transcript with `deep-translator` / Google Translate.
+4. Generate translated speech with ElevenLabs.
+5. Use Wav2Lip when available, or replace the original audio track as a fallback.
 
-## Supported Languages
-- English to Telugu
+**Important:** The configured ElevenLabs voice is a selected provider voice by default. This implementation does not clone the original speaker's voice. Do not describe output as perfect lip-sync unless you have tested that result with Wav2Lip and the required model checkpoint.
 
----
+## Supported input formats
+
+- MP4
+- MOV
+- AVI
+- Maximum upload size: 500 MB
+
+The language selectors include English, Hindi, Tamil, Kannada, Marathi, Bengali, and Telugu. Provider support and transcription quality can vary. The application currently rejects selecting the same source and target language.
 
 ## Requirements
-- Python 3.10
-- VS Code
-- Internet Connection
-- ElevenLabs API Key (free tier)
-- Google Colab (for Lip Sync - no GPU needed)
 
----
+- Python 3.10 (recommended for this dependency set)
+- FFmpeg installed and available on PATH
+- ElevenLabs API key
+- Wav2Lip repository and checkpoint, if you want model-based lip-sync
+- A working internet connection for Whisper model download and translation / speech services
 
-## AI Tools Used
-- OpenAI Whisper - Speech to Text (voice ni text ga convert chestundi)
-- Google Translate API - Text Translation (English to Telugu translate chestundi)
-- ElevenLabs - Voice Cloning (same voice tho Telugu lo matladistundi)
-- Wav2Lip - Lip Sync (lips ni new audio ki match chestundi)
+## Setup (Windows)
 
----
+1. Install Python 3.10 and FFmpeg.
+2. Clone this repository and open the folder in VS Code.
+3. Create and activate a virtual environment:
 
-## Tech Stack
-- Python 3.10 - Main programming language
-- Flask - Backend server
-- FFmpeg - Video and audio processing
-- HTML CSS JS - Frontend UI
-- Virtual Environment (venv) - Project environment
+   ```powershell
+   py -3.10 -m venv venv
+   .\venv\Scripts\Activate.ps1
+   ```
 
----
+4. Install dependencies:
 
-## Project Structure
-```
-TransVox/
-├── transvox.html        - Frontend UI
-├── app.py               - Flask Backend
-├── transcribe.py        - Whisper Speech to Text
-├── translate.py         - Google Translate
-├── voice_clone.py       - ElevenLabs Voice Clone
-├── lip_sync.py          - Wav2Lip Lip Sync
-├── requirements.txt     - Python Libraries
-├── .env                 - API Keys (secret)
-└── README.md            - This file
-```
-
----
-
-## Installation Steps
-1. Install Python 3.10
-2. Install VS Code
-3. Open TransVox folder in VS Code
-4. Create Virtual Environment:
-   python -m venv venv
-5. Activate Virtual Environment:
-   venv\Scripts\activate
-6. Install Libraries:
+   ```powershell
+   python -m pip install --upgrade pip
    pip install -r requirements.txt
-7. Add API Keys in .env file:
+   ```
+
+5. Create a local `.env` file in the project root:
+
+   ```dotenv
    ELEVENLABS_API_KEY=your_key_here
-8. Run the app:
+   # Optional: set a voice ID you are authorized to use
+   ELEVENLABS_VOICE_ID=your_voice_id
+   ```
+
+   Never commit real credentials. The `.env` file is excluded by `.gitignore`.
+
+6. Start the server:
+
+   ```powershell
    python app.py
-9. Open browser:
-   http://localhost:5000
+   ```
 
----
+7. Open http://127.0.0.1:5000 in your browser.
 
-## How to Use
-1. Upload your video (MP4, MOV, AVI)
-2. Select source language (English, Hindi, Tamil...)
-3. Select target language (Telugu...)
-4. Enable Voice Clone, Lip Sync options
-5. Click Start TransVox
-6. Wait for processing
-7. Download your dubbed video
+## Project structure
 
----
+```text
+transvox.ai/
+├── app.py
+├── transvox.html
+├── transcribe.py
+├── translate.py
+├── voice_clone.py
+├── lip_sync.py
+├── requirements.txt
+├── .gitignore
+└── README.md
+```
 
-## How It Works
-Video → Whisper → Google Translate → ElevenLabs → Wav2Lip → Final Video
-(audio)  (text)    (telugu text)     (telugu audio)  (lip sync)
+The application creates `input_video/` and `output_video/` at runtime. Uploaded videos and rendered outputs are stored on the server; delete them when they are no longer needed. Do not deploy this prototype publicly without adding authentication, rate limits, background jobs, retention cleanup, and production server configuration.
 
----
+## Security and operational notes
 
-## Future Features
-- Batch video processing
-- More language support
-- Custom voice upload
-- Mobile app
-- Cloud deployment
+- Uploads are restricted to MP4, MOV, and AVI extensions and a 500 MB request limit. Extension checks are not a substitute for validating actual media contents.
+- Flask debug mode is disabled.
+- API keys must remain in environment variables and must never be printed or committed.
+- Long-running Whisper and video-rendering jobs run in the request handler; a production deployment should use a background job queue and report real progress.
+- The app currently runs on localhost by default. Configure a production WSGI server and appropriate network controls before exposing it.
 
----
+## Troubleshooting
+
+- **MoviePy import errors:** This project pins MoviePy 1.0.3 to match the `moviepy.editor` imports.
+- **FFmpeg errors:** Install FFmpeg and confirm `ffmpeg -version` works in the same terminal.
+- **ElevenLabs errors:** Confirm the API key is valid and your account has access to the selected model / voice.
+- **Lip-sync fallback:** Ensure both `Wav2Lip/inference.py` and `Wav2Lip/checkpoints/wav2lip_gan.pth` exist. Otherwise the app only replaces the audio track.
+- **No speech detected:** Use a video with a clear audio track and audible speech.
 
 ## Developer
-Built by - Mallikarjun reddy 
-Project - TransVox
-Version - 1.0.0
+
+Built by Mallikarjun Reddy Chilakala  
+Project: TransVox  
+Version: 1.0.0
