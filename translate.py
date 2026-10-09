@@ -1,44 +1,49 @@
 from deep_translator import GoogleTranslator
 
-def translate_text(text, source_lang='en', target_lang='te'):
-    """Translate text from source language to target language"""
-    
-    print(f"Translating from {source_lang} to {target_lang}...")
-    
-    # Split text into chunks (Google Translate has character limit)
+SUPPORTED_LANGUAGES = {"en", "hi", "ta", "kn", "mr", "bn", "te"}
+
+
+def translate_text(text, source_lang="en", target_lang="te"):
+    """Translate text in chunks while respecting the provider's input limit."""
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("There is no text to translate.")
+    if source_lang not in SUPPORTED_LANGUAGES or target_lang not in SUPPORTED_LANGUAGES:
+        raise ValueError("Unsupported source or target language.")
+    if source_lang == target_lang:
+        raise ValueError("Source and target languages must be different.")
+
     max_chunk_size = 4500
+    words = text.split()
     chunks = []
-    
-    # Split long text into smaller chunks
-    if len(text) > max_chunk_size:
-        words = text.split(' ')
-        current_chunk = ''
-        
-        for word in words:
-            if len(current_chunk) + len(word) < max_chunk_size:
-                current_chunk += word + ' '
-            else:
-                chunks.append(current_chunk.strip())
-                current_chunk = word + ' '
-        
-        if current_chunk:
-            chunks.append(current_chunk.strip())
-    else:
-        chunks = [text]
-    
-    # Translate each chunk
+    current_chunk = ""
+
+    for word in words:
+        # Avoid producing an empty chunk and handle unusually long tokens.
+        while len(word) > max_chunk_size:
+            if current_chunk:
+                chunks.append(current_chunk)
+                current_chunk = ""
+            chunks.append(word[:max_chunk_size])
+            word = word[max_chunk_size:]
+
+        candidate = f"{current_chunk} {word}".strip()
+        if len(candidate) > max_chunk_size:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = word
+        else:
+            current_chunk = candidate
+
+    if current_chunk:
+        chunks.append(current_chunk)
+
+    translator = GoogleTranslator(source=source_lang, target=target_lang)
     translated_chunks = []
-    
-    for i, chunk in enumerate(chunks):
-        print(f"Translating chunk {i+1}/{len(chunks)}...")
-        translated = GoogleTranslator(source=source_lang, target=target_lang).translate(chunk)
+    for index, chunk in enumerate(chunks, start=1):
+        print(f"Translating chunk {index}/{len(chunks)}...")
+        translated = translator.translate(chunk)
+        if not translated:
+            raise RuntimeError(f"Translation failed for text chunk {index}.")
         translated_chunks.append(translated)
-    
-    # Join all translated chunks
-    final_translation = ' '.join(translated_chunks)
-    
-    print(f"Translation complete!")
-    print(f"Original: {text[:100]}...")
-    print(f"Translated: {final_translation[:100]}...")
-    
-    return final_translation
+
+    return " ".join(translated_chunks).strip()
