@@ -1,72 +1,54 @@
-import os
 import subprocess
-from moviepy.editor import VideoFileClip, AudioFileClip
+import sys
+from pathlib import Path
+
+from moviepy.editor import AudioFileClip, VideoFileClip
+
 
 def sync_lips(video_path, audio_path, filename):
-    """Sync lips in video with new translated audio"""
-    
-    print("Starting lip sync process...")
-    
-    # Output path
-    os.makedirs('output_video', exist_ok=True)
-    output_path = f"output_video/{filename}_dubbed.mp4"
-    
-    # Check if Wav2Lip is available
-    wav2lip_path = "Wav2Lip/inference.py"
-    
-    if os.path.exists(wav2lip_path):
-        # Use Wav2Lip for proper lip sync
-        print("Using Wav2Lip for lip sync...")
-        output_path = run_wav2lip(video_path, audio_path, output_path)
-    else:
-        # Simple audio replacement (without lip sync)
-        print("Wav2Lip not found - Using simple audio replacement...")
-        output_path = replace_audio(video_path, audio_path, output_path)
-    
-    print(f"Lip sync complete: {output_path}")
-    return output_path
+    """Render a dubbed video, using Wav2Lip when its model is installed."""
+    video_path = Path(video_path)
+    audio_path = Path(audio_path)
+    safe_stem = video_path.stem
+    if len(safe_stem) != 32 or any(char not in "0123456789abcdef" for char in safe_stem):
+        raise ValueError("Invalid internal video filename.")
 
-def replace_audio(video_path, audio_path, output_path):
-    """Replace video audio with translated audio"""
-    
-    print("Replacing audio in video...")
-    
-    # Load video and new audio
-    video = VideoFileClip(video_path)
-    new_audio = AudioFileClip(audio_path)
-    
-    # Replace audio
-    final_video = video.set_audio(new_audio)
-    
-    # Save final video
-    final_video.write_videofile(
-        output_path,
-        codec='libx264',
-        audio_codec='aac'
-    )
-    
-    # Close files
-    video.close()
-    new_audio.close()
-    final_video.close()
-    
-    print(f"Audio replaced successfully: {output_path}")
-    return output_path
+    output_dir = Path("output_video")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"{safe_stem}_dubbed.mp4"
 
-def run_wav2lip(video_path, audio_path, output_path):
-    """Run Wav2Lip for proper lip sync"""
-    
-    print("Running Wav2Lip...")
-    
-    command = [
-        "python", "Wav2Lip/inference.py",
-        "--checkpoint_path", "Wav2Lip/checkpoints/wav2lip_gan.pth",
-        "--face", video_path,
-        "--audio", audio_path,
-        "--outfile", output_path
-    ]
-    
-    subprocess.run(command, check=True)
-    
-    print(f"Wav2Lip complete: {output_path}")
-    return output_path
+    wav2lip_script = Path("Wav2Lip") / "inference.py"
+    checkpoint = Path("Wav2Lip") / "checkpoints" / "wav2lip_gan.pth"
+
+    if wav2lip_script.is_file() and checkpoint.is_file():
+        command = [
+            sys.executable, str(wav2lip_script),
+            "--checkpoint_path", str(checkpoint),
+            "--face", str(video_path),
+            "--audio", str(audio_path),
+            "--outfile", str(output_path),
+        ]
+        subprocess.run(command, check=True)
+        if not output_path.is_file():
+            raise RuntimeError("Wav2Lip did not create the output video.")
+        return str(output_path)
+
+    print("Wav2Lip script/checkpoint not found; replacing the audio track only.")
+    video = VideoFileClip(str(video_path))
+    new_audio = AudioFileClip(str(audio_path))
+    final_video = None
+    try:
+        final_video = video.set_audio(new_audio)
+        final_video.write_videofile(
+            str(output_path),
+            codec="libx264",
+            audio_codec="aac",
+            logger=None,
+        )
+    finally:
+        if final_video is not None:
+            final_video.close()
+        new_audio.close()
+        video.close()
+
+    return str(output_path)
